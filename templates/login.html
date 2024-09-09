@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-3xl mb-4">Вход</h2>
+<form method="POST" action="{{ url_for('main_bp.login') }}" class="card">
+    {{ form.hidden_tag() }}
+    <div class="mb-4">
+        {{ form.email.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.email(class_='form-input w-full') }}
+    </div>
+    <div class="mb-4">
+        {{ form.password.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.password(class_='form-input w-full') }}
+    </div>
+    {{ form.submit(class_='btn') }}
+</form>
+{% endblock %}

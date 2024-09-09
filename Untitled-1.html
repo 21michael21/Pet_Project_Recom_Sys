@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Полный План Курса по Автоматизации Тестирования</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .calendar-container {
+            width: 80%;
+            max-width: 1200px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .week {
+            margin-bottom: 20px;
+        }
+
+        .week h2 {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .lesson {
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .lesson h3 {
+            margin: 0;
+            color: #555;
+        }
+
+        .lesson ul {
+            margin: 10px 0 0 20px;
+            padding: 0;
+        }
+
+        .lesson ul li {
+            list-style-type: square;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .lesson .practice {
+            background-color: #e7f3e7;
+            padding: 10px;
+            border-left: 4px solid #4CAF50;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+        .lesson .examples {
+            background-color: #f3e7e7;
+            padding: 10px;
+            border-left: 4px solid #FF5722;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+
+        .kanban-board {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .kanban-column {
+            width: 32%;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .kanban-column h3 {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .kanban-column .kanban-item {
+            background-color: white;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="calendar-container">
+        <h1>Полный План Курса по Автоматизации Тестирования</h1>
+
+        <div class="week">
+            <h2>Неделя 1-2: Введение в Автоматизацию Тестирования и Основы Python</h2>
+            <div class="lesson">
+                <h3>Урок 1: Введение в Автоматизацию Тестирования</h3>
+                <ul>
+                    <li>Что такое тестирование? Введение в основные понятия: баг, дефект, жизненный цикл дефекта.</li>
+                    <li>Виды тестирования: функциональное, нефункциональное, регрессионное, дымовое, санитарное.</li>
+                    <li>Автоматизация тестирования: цели, преимущества, недостатки.</li>
+                    <li>Основные этапы жизненного цикла ПО и роль автотестировщика.</li>
+                    <li>Обзор основных процессов разработки: Agile, Scrum, Kanban, Waterfall. Роль тестировщика в каждом процессе.</li>
+                </ul>
+                <div class="practice">
+                    <strong>Практика:</strong>
+                    <ul>
+                        <li>Установка и настройка Python.</li>
+                        <li>Установка IDE (например, PyCharm, VSCode).</li>
+                        <li>Создание простого Python-скрипта для вывода "Hello, World!".</li>
+                    </ul>
+                </div>
+                <div class="examples">
+                    <strong>Примеры:</strong>
+                    <ul>
+                        <li>Пример простого ручного тест-кейса и его перевод в автоматизированный тест.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="lesson">
+                <h3>Урок 2: Основы Программирования на Python для Тестировщиков</h3>
+                <ul>
+                    <li>Основные конструкции Python: переменные, типы данных, условия, циклы.</li>
+                    <li>Функции и модули: создание и использование.</li>
+                    <li>Работа с файлами: чтение и запись данных.</li>
+                    <li>Введение в обработку исключений и логирование.</li>
+                </ul>
+                <div class="practice">
+                    <strong>Практика:</strong>
+                    <ul>
+                        <li>Написание скриптов для выполнения базовых операций (например, вычисление факториала, работа со строками).</li>
+                        <li>Создание функций для повторяющихся операций.</li>
+                        <li>Добавление логирования в скрипты для отслеживания выполнения операций.</li>
+                    </ul>
+                </div>
+                <div class="examples">
+                    <strong>Примеры:</strong>
+                    <ul>
+                        <li>Скрипт для чтения данных из текстового файла и их обработки.</li>
+                        <li>Логирование шагов выполнения скрипта.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- You can continue adding more weeks and lessons in the same format -->
+
+        <div class="kanban-board">
+            <div class="kanban-column">
+                <h3>To Do</h3>
+                <div class="kanban-item">Урок 1: Введение в Автоматизацию Тестирования</div>
+                <div class="kanban-item">Урок 2: Основы Программирования на Python для Тестировщиков</div>
+                <!-- Add more kanban items as needed -->
+            </div>
+            <div class="kanban-column">
+                <h3>In Progress</h3>
+                <!-- Move items here as they are being worked on -->
+            </div>
+            <div class="kanban-column">
+                <h3>Done</h3>
+                <!-- Move items here as they are completed -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>

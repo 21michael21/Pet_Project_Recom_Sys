@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-3xl mb-4">Рекомендации по фильмам</h2>
+<form method="POST" action="{{ url_for('recommendations_bp.recommendations') }}" class="card mb-8">
+    {{ form.hidden_tag() }}
+    <div class="mb-4">
+        {{ form.movie_title.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.movie_title(class_='form-input w-full') }}
+    </div>
+    {{ form.submit(class_='btn') }}
+</form>
+
+{% if movies %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for movie in movies %}
+            <div class="card">
+                <h3 class="card-title">{{ movie.title }}</h3>
+                <p class="card-text">{{ movie.overview or 'Описание отсутствует.' }}</p>
+                <p class="card-text"><strong>Жанры:</strong> {{ movie.genres }}</p>
+                <p class="card-text"><strong>Рейтинг:</strong> {{ movie.rating }} / 10</p>
+                <form method="POST" action="{{ url_for('recommendations_bp.rate_movie', movie_id=movie.id) }}">
+                    <div class="rating mb-4">
+                        {% for i in range(1, 11) %}
+                            <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" {% if movie.rating >= i %}checked{% endif %}>
+                            <label for="star{{ i }}">&#9733;</label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn">Оценить</button>
+                </form>
+                <form method="POST" action="{{ url_for('profile_bp.watch_movie', movie_id=movie.id) }}">
+                    <button type="submit" class="btn mt-2">Добавить в просмотренные</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

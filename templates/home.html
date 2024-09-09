@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex flex-col items-center">
+    <h1 class="text-4xl font-bold mb-4">Добро пожаловать на Movie Recommendation System</h1>
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('recommendations_bp.recommendations') }}" class="btn">Получить рекомендации</a>
+    {% else %}
+        <a href="{{ url_for('main_bp.login') }}" class="btn">Войти</a>
+        <a href="{{ url_for('main_bp.register') }}" class="btn mt-2">Зарегистрироваться</a>
+    {% endif %}
+</div>
+{% endblock %}

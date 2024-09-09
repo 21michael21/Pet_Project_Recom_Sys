@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex flex-col items-center">
+    <h1 class="text-5xl font-bold mb-4">404</h1>
+    <p class="text-lg mb-4">Страница не найдена</p>
+    <a href="{{ url_for('main_bp.home') }}" class="btn">Вернуться на главную</a>
+</div>
+{% endblock %}

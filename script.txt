@@ -1,0 +1,816 @@
+Текущая структура проекта уже выглядит неплохо, но можно добавить больше стилей и улучшений. Давайте:
+
+Добавим больше стилей и улучшим страницу:
+Реализуем 404 страницу и дополнительные проверки:
+Добавим функциональность для рекомендаций фильмов:
+Добавим личный кабинет:
+Сделаем страницу обратной связи:
+Полная структура проекта:
+
+
+project/
+│
+├── app.py
+├── config.py
+├── forms.py
+├── import_data.py
+├── models.py
+├── recommendation.py
+├── requirements.txt
+├── static/
+│   ├── css/
+│   │   └── styles.css
+│   └── images/
+│       └── default-avatar.png
+├── templates/
+│   ├── base.html
+│   ├── 404.html
+│   ├── feedback.html
+│   ├── home.html
+│   ├── login.html
+│   ├── profile.html
+│   ├── recommendations.html
+│   └── register.html
+├── routes/
+│   ├── __init__.py
+│   ├── feedback.py
+│   ├── main.py
+│   ├── profile.py
+│   └── recommendations.py
+└── feedbacks.txt
+Файл app.py:
+
+
+from flask import Flask, render_template
+from config import Config
+from models import db, User
+from routes import main_bp, recommendations_bp, profile_bp, feedback_bp
+from flask_login import LoginManager
+
+app = Flask(__name__)
+app.config.from_object(Config)
+db.init_app(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'main_bp.login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+app.register_blueprint(main_bp)
+app.register_blueprint(recommendations_bp)
+app.register_blueprint(profile_bp)
+app.register_blueprint(feedback_bp)
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
+Файл config.py:
+
+
+import os
+
+class Config:
+    SECRET_KEY = 'your-secret-key'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'movie_recommendation_system.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+Файл models.py:
+
+
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
+import datetime
+
+db = SQLAlchemy()
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(150), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    reviews = db.relationship('Review', backref='user', lazy=True)
+    watched_movies = db.relationship('WatchedMovie', backref='user', lazy=True)
+    search_history = db.relationship('SearchHistory', backref='user', lazy=True)
+    ratings = db.relationship('Rating', backref='user', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class Movie(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    genres = db.Column(db.String(150), nullable=False)
+    overview = db.Column(db.Text, nullable=True)
+    rating = db.Column(db.Float, default=0.0)
+    reviews = db.relationship('Review', backref='movie', lazy=True)
+    watched_movies = db.relationship('WatchedMovie', backref='movie', lazy=True)
+
+    def update_average_rating(self):
+        ratings = Rating.query.filter_by(movie_id=self.id).all()
+        if ratings:
+            average_rating = sum([rating.rating for rating in ratings]) / len(ratings)
+            self.rating = round(average_rating, 2)
+            db.session.commit()
+
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)
+    rating = db.Column
+
+
+продолжи
+
+
+
+Продолжение кода models.py:
+
+
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+
+class WatchedMovie(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)
+    watched_date = db.Column(db.DateTime, server_default=db.func.now())
+
+class SearchHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    query = db.Column(db.String(150), nullable=False)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now())
+
+class Rating(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)
+    rating = db.Column(db.Float, nullable=False)
+
+    @staticmethod
+    def update_movie_ratings():
+        movies = Movie.query.all()
+        for movie in movies:
+            ratings = Rating.query.filter_by(movie_id=movie.id).all()
+            if ratings:
+                average_rating = sum([rating.rating for rating in ratings]) / len(ratings)
+                movie.rating = round(average_rating, 2)
+        db.session.commit()
+Файл forms.py:
+
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField, IntegerField, TextAreaField, SelectField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange
+from models import Movie
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Пароль', validators=[DataRequired()])
+    submit = SubmitField('Войти')
+
+class RegistrationForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Пароль', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Подтвердите пароль', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Регистрация')
+
+class FeedbackForm(FlaskForm):
+    rating = IntegerField('Рейтинг', validators=[DataRequired(), NumberRange(min=1, max=10)])
+    message = TextAreaField('Сообщение', validators=[DataRequired()])
+    movie_id = SelectField('Фильм', coerce=int, validators=[DataRequired()])
+    submit = SubmitField('Отправить')
+
+    def __init__(self, *args, **kwargs):
+        super(FeedbackForm, self).__init__(*args, **kwargs)
+        self.movie_id.choices = [(movie.id, movie.title) for movie in Movie.query.order_by(Movie.title).all()]
+
+class SearchForm(FlaskForm):
+    movie_title = StringField('Название фильма', validators=[DataRequired()])
+    submit = SubmitField('Подобрать')
+Файл recommendation.py:
+
+
+import pandas as pd
+from models import Movie
+
+movies_df = pd.read_csv('movies.csv')
+ratings_df = pd.read_csv('ratings.csv')
+
+def get_recommendations(title, n=5):
+    title = title.lower()
+    movie = movies_df[movies_df['title'].str.lower().str.contains(title)]
+    if movie.empty:
+        return []
+
+    movie_id = movie.iloc[0]['movieId']
+    user_ids = ratings_df[ratings_df['movieId'] == movie_id]['userId'].unique()
+    similar_ratings = ratings_df[ratings_df['userId'].isin(user_ids)]
+    similar_movies = similar_ratings['movieId'].value_counts().index.tolist()
+    
+    recommended_movies = [Movie.query.get(mid) for mid in similar_movies if mid != movie_id]
+    return recommended_movies[:n]
+Файл import_data.py:
+
+
+import csv
+from models import db, Movie, Rating
+from app import app
+
+def import_movies(filename):
+    with open(filename, newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            movie = Movie(id=row['movieId'], title=row['title'], genres=row['genres'], overview=row['overview'])
+            db.session.add(movie)
+        db.session.commit()
+
+def import_ratings(filename):
+    with open(filename, newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            rating = Rating(user_id=row['
+
+
+продолжи
+
+
+
+Продолжение кода import_data.py:
+
+
+user_id'], movie_id=row['movieId'], rating=float(row['rating']))
+            db.session.add(rating)
+        db.session.commit()
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        import_movies('movies.csv')
+        import_ratings('ratings.csv')
+Файл routes/__init__.py:
+
+
+from flask import Blueprint
+
+main_bp = Blueprint('main_bp', __name__, template_folder='../templates')
+recommendations_bp = Blueprint('recommendations_bp', __name__, template_folder='../templates')
+profile_bp = Blueprint('profile_bp', __name__, template_folder='../templates')
+feedback_bp = Blueprint('feedback_bp', __name__, template_folder='../templates')
+
+from . import main, recommendations, profile, feedback
+Файл routes/main.py:
+
+
+from flask import render_template, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required
+from forms import LoginForm, RegistrationForm
+from models import db, User
+from routes import main_bp
+
+@main_bp.route('/')
+def home():
+    return render_template('home.html')
+
+@main_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            flash('Вы успешно вошли в систему.')
+            return redirect(url_for('main_bp.home'))
+        else:
+            flash('Неверный email или пароль.')
+    return render_template('login.html', form=form)
+
+@main_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(email=form.email.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash('Регистрация прошла успешно. Теперь вы можете войти.')
+        return redirect(url_for('main_bp.login'))
+    return render_template('register.html', form=form)
+
+@main_bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Вы успешно вышли из системы.')
+    return redirect(url_for('main_bp.home'))
+Файл routes/recommendations.py:
+
+
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
+from forms import SearchForm
+from models import db, SearchHistory, Movie, WatchedMovie, Rating
+from recommendation import get_recommendations
+from routes import recommendations_bp
+
+@recommendations_bp.route('/recommendations', methods=['GET', 'POST'])
+@login_required
+def recommendations():
+    form = SearchForm()
+    movies = []
+    if form.validate_on_submit():
+        query = form.movie_title.data
+        movies = get_recommendations(query)
+        if movies:
+            history = SearchHistory(user_id=current_user.id, query=query)
+            db.session.add(history)
+            db.session.commit()
+        else:
+            flash('Фильмы с таким названием не найдены.')
+    return render_template('recommendations.html', form=form, movies=movies)
+
+@recommendations_bp.route('/rate_movie/<int:movie_id>', methods=['POST'])
+@login_required
+def rate_movie(movie_id):
+    rating_value = request.form.get('rating')
+    if rating_value:
+        rating_value = float(rating_value)
+        rating = Rating.query.filter_by(user_id=current_user.id, movie_id=movie_id).first()
+        if rating:
+            rating.rating = rating_value
+        else:
+            rating = Rating(user_id=current_user.id, movie_id=movie_id, rating=rating_value)
+            db.session.add(rating)
+        db.session.commit()
+        Movie.query.get(movie_id).update_average_rating()
+        flash('Рейтинг успешно сохранен.')
+    return redirect(url_for('recommendations_bp.recommendations'))
+Файл routes/profile.py:
+
+
+from flask import render_template, redirect, url_for, flash
+from flask_login import login_required, current_user
+from models import db, SearchHistory, Review, WatchedMovie, Movie
+from routes import profile_bp
+
+@profile_bp.route('/profile', methods=['GET'])
+@login_required
+def profile():
+    search_history = SearchHistory.query.filter_by(user_id=current_user.id).order_by(SearchHistory.timestamp.desc()).all()
+    reviews = Review.query.filter_by(user_id=current_user.id).order_by(Review.created_at.desc()).all()
+    watched_movies = WatchedMovie.query.filter_by(user_id=current_user.id).order_by(WatchedMovie.watched_date.desc()).all()
+    movies_info = {movie.id: movie for movie in Movie.query.all()}
+    return render_template('profile.html', search_history=search_history, reviews=reviews, watched_movies=watched
+
+
+продолжи
+
+
+
+movies_info)
+
+@profile_bp.route('/review_movie/int:movie_id', methods=['POST'])
+@login_required
+def review_movie(movie_id):
+rating = request.form.get('rating')
+comment = request.form.get('comment')
+if rating:
+review = Review.query.filter_by(user_id=current_user.id, movie_id=movie_id).first()
+if review:
+review.rating = int(rating)
+review.comment = comment
+else:
+review = Review(user_id=current_user.id, movie_id=movie_id, rating=int(rating), comment=comment)
+db.session.add(review)
+db.session.commit()
+Movie.query.get(movie_id).update_average_rating()
+flash('Отзыв успешно сохранен.')
+return redirect(url_for('profile_bp.profile'))
+
+@profile_bp.route('/watch_movie/int:movie_id', methods=['POST'])
+@login_required
+def watch_movie(movie_id):
+watched_movie = WatchedMovie.query.filter_by(user_id=current_user.id, movie_id=movie_id).first()
+if not watched_movie:
+watched_movie = WatchedMovie(user_id=current_user.id, movie_id=movie_id)
+db.session.add(watched_movie)
+db.session.commit()
+flash('Фильм добавлен в список просмотренных.')
+else:
+flash('Фильм уже в списке просмотренных.')
+return redirect(url_for('profile_bp.profile'))
+
+
+
+**Файл `routes/feedback.py`:**
+
+```python
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import login_required, current_user
+from forms import FeedbackForm
+from models import db, Review, Movie
+from routes import feedback_bp
+
+@feedback_bp.route('/feedback', methods=['GET', 'POST'])
+@login_required
+def feedback():
+    form = FeedbackForm()
+    if form.validate_on_submit():
+        rating = form.rating.data
+        message = form.message.data
+        movie_id = form.movie_id.data
+
+        review = Review.query.filter_by(user_id=current_user.id, movie_id=movie_id).first()
+        if review:
+            review.rating = rating
+            review.comment = message
+        else:
+            review = Review(user_id=current_user.id, movie_id=movie_id, rating=rating, comment=message)
+            db.session.add(review)
+        db.session.commit()
+        Movie.query.get(movie_id).update_average_rating()
+
+        with open('feedbacks.txt', 'a') as f:
+            f.write(f"{current_user.email}: {message}\n")
+
+        flash('Спасибо за ваш отзыв!')
+        return redirect(url_for('feedback_bp.feedback'))
+
+    return render_template('feedback.html', form=form)
+Файл static/css/styles.css:
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    @apply bg-gray-100 font-sans leading-normal tracking-normal;
+}
+
+.navbar {
+    @apply bg-blue-600 text-white shadow-lg py-3;
+}
+
+.nav-item {
+    @apply px-4 py-2 hover:bg-blue-700;
+}
+
+.btn-custom {
+    @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow;
+}
+
+.card {
+    @apply bg-white shadow-lg rounded-lg p-4;
+}
+
+.card-title {
+    @apply text-xl font-semibold;
+}
+
+.card-text {
+    @apply text-gray-700;
+}
+
+.rating-stars {
+    @apply flex items-center;
+}
+
+.rating-stars span {
+    @apply text-yellow-500 text-xl;
+}
+Шаблон templates/base.html:
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommendation System</title>
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container mx-auto flex justify-between">
+            <a href="{{ url_for('main_bp.home') }}" class="nav-item">Главная</a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('profile_bp.profile') }}" class="nav-item">Профиль</a>
+                <a href="{{ url_for('recommendations_bp.recommendations') }}" class="nav-item">Рекомендации</a>
+                <a href="{{ url_for('feedback_bp.feedback') }}" class="nav-item">Обратная связь</a>
+                <a href="{{ url_for('main_bp.logout') }}" class="nav-item">Выйти</a>
+            {% else %}
+                <a href="{{ url_for('main_bp.login') }}" class="nav-item">Вход</a>
+                <a href="{{ url_for('main_bp.register') }}" class="nav-item">Регистрация</a>
+            {% endif %}
+        </div
+
+
+продолжи
+
+
+
+
+    </nav>
+
+    <div class="container mx-auto my-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                    {% for category, message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+</html>
+Шаблон templates/404.html:
+
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex flex-col items-center">
+    <h1 class="text-5xl font-bold mb-4">404</h1>
+    <p class="text-lg mb-4">Страница не найдена</p>
+    <a href="{{ url_for('main_bp.home') }}" class="btn-custom">Вернуться на главную</a>
+</div>
+{% endblock %}
+Шаблон templates/feedback.html:
+
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-3xl mb-4">Обратная связь</h2>
+<form method="POST" action="{{ url_for('feedback_bp.feedback') }}" class="card">
+    {{ form.hidden_tag() }}
+    <div class="mb-4">
+        {{ form.movie_id.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.movie_id(class_='form-input w-full') }}
+    </div>
+    <div class="mb-4">
+        {{ form.rating.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.rating(class_='form-input w-full') }}
+    </div>
+    <div class="mb-4">
+        {{ form.message.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.message(class_='form-textarea w-full') }}
+    </div>
+    {{ form.submit(class_='btn-custom') }}
+</form>
+{% endblock %}
+Шаблон templates/home.html:
+
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex flex-col items-center">
+    <h1 class="text-4xl font-bold mb-4">Добро пожаловать на Movie Recommendation System</h1>
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('recommendations_bp.recommendations') }}" class="btn-custom">Получить рекомендации</a>
+    {% else %}
+        <a href="{{ url_for('main_bp.login') }}" class="btn-custom">Войти</a>
+        <a href="{{ url_for('main_bp.register') }}" class="btn-custom mt-2">Зарегистрироваться</a>
+    {% endif %}
+</div>
+{% endblock %}
+Шаблон templates/login.html:
+
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-3xl mb-4">Вход</h2>
+<form method="POST" action="{{ url_for('main_bp.login') }}" class="card">
+    {{ form.hidden_tag() }}
+    <div class="mb-4">
+        {{ form.email.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.email(class_='form-input w-full') }}
+    </div>
+    <div class="mb-4">
+        {{ form.password.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.password(class_='form-input w-full') }}
+    </div>
+    {{ form.submit(class_='btn-custom') }}
+</form>
+{% endblock %}
+Шаблон templates/profile.html:
+
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-3xl mb-4">Личный кабинет</h2>
+<div class="card mb-8">
+    <h3 class="card-title mb-4">История запросов</h3>
+    {% if search_history %}
+        <ul class="list-disc list-inside">
+            {% for history in search_history %}
+                <li>{{ history.query }} ({{ history.timestamp.strftime('%Y-%m-%d %H:%M:%S') }})</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="card-text">Запросов не найдено.</p>
+    {% endif %}
+</div>
+
+<div class="card mb-8">
+    <h3 class="card-title mb-4">История отзывов</h3>
+    {% if reviews %}
+        <ul class="list-disc list-inside">
+
+
+продолжи
+
+
+
+
+            {% for review in reviews %}
+                <li>
+                    <strong>{{ movies_info[review.movie_id].title }}</strong>: {{ review.rating }} / 10
+                    <p>{{ review.comment }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="card-text">Отзывов не найдено.</p>
+    {% endif %}
+</div>
+
+<div class="card mb-8">
+    <h3 class="card-title mb-4">История просмотренных фильмов</h3>
+    {% if watched_movies %}
+        <ul class="list-disc list-inside">
+            {% for watched in watched_movies %}
+                <li>
+                    <strong>{{ movies_info[watched.movie_id].title }}</strong> ({{ watched.watched_date.strftime('%Y-%m-%d') }})
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="card-text">Просмотренных фильмов не найдено.</p>
+    {% endif %}
+</div>
+{% endblock %}
+Шаблон templates/recommendations.html:
+
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-3xl mb-4">Рекомендации по фильмам</h2>
+<form method="POST" action="{{ url_for('recommendations_bp.recommendations') }}" class="card mb-8">
+    {{ form.hidden_tag() }}
+    <div class="mb-4">
+        {{ form.movie_title.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.movie_title(class_='form-input w-full') }}
+    </div>
+    {{ form.submit(class_='btn-custom') }}
+</form>
+
+{% if movies %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for movie in movies %}
+            <div class="card">
+                <h3 class="card-title">{{ movie.title }}</h3>
+                <p class="card-text">{{ movie.overview or 'Описание отсутствует.' }}</p>
+                <p class="card-text"><strong>Жанры:</strong> {{ movie.genres }}</p>
+                <p class="card-text"><strong>Рейтинг:</strong> {{ movie.rating }} / 10</p>
+                <form method="POST" action="{{ url_for('recommendations_bp.rate_movie', movie_id=movie.id) }}">
+                    <div class="mb-4 rating-stars">
+                        {% for i in range(1, 11) %}
+                            <span class="{{ 'text-yellow-500' if i <= movie.rating else 'text-gray-400' }}">★</span>
+                        {% endfor %}
+                    </div>
+                    <input type="number" name="rating" min="1" max="10" class="form-input w-full mb-2">
+                    <button type="submit" class="btn-custom">Оценить</button>
+                </form>
+                <form method="POST" action="{{ url_for('profile_bp.watch_movie', movie_id=movie.id) }}">
+                    <button type="submit" class="btn-custom mt-2">Добавить в просмотренные</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}
+Инструкция по запуску проекта
+Установка Python: Убедитесь, что у вас установлен Python версии 3.8 и выше. Вы можете скачать его с официального сайта Python.
+Создайте виртуальное окружение: В командной строке выполните следующие команды:
+
+python -m venv venv
+Активируйте виртуальное окружение:
+Для Windows:
+
+venv\Scripts\activate
+Для macOS/Linux:
+
+source venv/bin/activate
+Установите зависимости: В активированном виртуальном окружении выполните:
+
+pip install -r requirements.txt
+Подготовьте базу данных: Выполните команду для импорта данных о фильмах и рейтингах:
+
+python import_data.py
+Запустите приложение: Выполните команду:
+
+python app.py
+Перейдите на сайт: Откройте ваш браузер и перейдите по адресу http://127.0.0.1:5000.
+Файл requirements.txt
+
+Flask==2.1.1
+Flask-SQLAlchemy==2.5.1
+Flask-WTF==1.0.0
+Flask-Login==0.5.0
+WTForms==3.0.1
+pandas==1.4.2
+
+
+Реализованный функционал в сайте
+Современный дизайн и улучшенный пользовательский интерфейс:
+Используется TailwindCSS для создания современного и интуитивно понятного дизайна.
+Добавлены стили для всех страниц.
+Добавлена навигационная панель с динамическими пунктами в зависимости от состояния аутентификации пользователя.
+Реализована страница 404 для обработки ошибок маршрутизации.
+Рекомендации по фильмам:
+Форма поиска фильмов с выдачей 5 рекомендаций на основе введенного пользователем названия фильма.
+Кнопка для обновления рекомендаций.
+Алгоритм рекомендаций использует данные из movies.csv и ratings.csv.
+Регистрация и аутентификация:
+Пользователь может зарегистрироваться с использованием электронной почты и пароля.
+Реализована форма входа с возможностью выхода из системы.
+Оценка фильмов и сохранение истории:
+Пользователь может оценивать фильмы, и их оценки сохраняются в базе данных.
+История запросов рекомендаций и просмотренных фильмов сохраняется в профиле пользователя.
+Рейтинги фильмов обновляются динамически.
+Форма обратной связи:
+Пользователь может отправить отзыв о сайте, который сохраняется в текстовом файле.
+Отзывы также сохраняются в базе данных и отображаются в профиле пользователя.
+Личный кабинет:
+История запросов рекомендаций, отзывов и просмотренных фильмов пользователя доступна в личном кабинете.
+Добавлены тени и эффекты ховер в карточках для улучшения восприятия.
+Обработка исключительных ситуаций:
+Проверка на наличие фильма перед оценкой или добавлением в просмотренные.
+Проверка корректности рейтинга.
+Алгоритм рекомендаций обрабатывает случаи отсутствия фильмов с заданным названием.
+Обработка ошибок маршрутизации с помощью страницы 404.
+Логирование ошибок при получении рекомендаций.
+Как работает сайт
+Домашняя страница:
+Приветствует пользователя и предлагает зарегистрироваться или войти в систему.
+Аутентифицированный пользователь может сразу перейти к получению рекомендаций.
+Регистрация / Вход:
+Пользователь может зарегистрироваться с email и паролем.
+После входа ему доступен функционал рекомендаций, оценки и личного кабинета.
+Рекомендации:
+Пользователь вводит название фильма в форму.
+Система находит и предлагает 5 наиболее подходящих фильмов на основе алгоритма рекомендаций.
+Пользователь может оценивать фильмы и добавлять их в просмотренные.
+Форма обратной связи:
+Форма позволяет отправить отзыв о сайте и оценить выбранный фильм.
+Отзыв сохраняется как в текстовом файле, так и в базе данных.
+Личный кабинет:
+История запросов рекомендаций.
+История отзывов по фильмам.
+Список просмотренных фильмов.
+Инструкция по запуску сайта
+Установка Python: Убедитесь, что у вас установлен Python версии 3.8 и выше. Вы можете скачать его с официального сайта Python.
+Создайте виртуальное окружение: В командной строке выполните следующие команды:
+
+python -m venv venv
+Активируйте виртуальное окружение:
+Для Windows:
+
+venv\Scripts\activate
+Для macOS/Linux:
+
+source venv/bin/activate
+Установите зависимости: В активированном виртуальном окружении выполните:
+
+pip install -r requirements.txt
+Подготовьте базу данных: Выполните команду для импорта данных о фильмах и рейтингах:
+
+python import_data.py
+Запустите приложение: Выполните команду:
+
+python app.py
+Перейдите на сайт: Откройте ваш браузер и перейдите по адресу http://127.0.0.1:5000.

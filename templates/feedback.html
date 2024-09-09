@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-3xl mb-4">Обратная связь</h2>
+<form method="POST" action="{{ url_for('feedback_bp.feedback') }}" class="card">
+    {{ form.hidden_tag() }}
+    <div class="mb-4">
+        {{ form.movie_id.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.movie_id(class_='form-input w-full') }}
+    </div>
+    <div class="mb-4">
+        {{ form.rating.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.rating(class_='form-input w-full') }}
+    </div>
+    <div class="mb-4">
+        {{ form.message.label(class_='block text-gray-700 font-bold mb-2') }}
+        {{ form.message(class_='form-textarea w-full') }}
+    </div>
+    {{ form.submit(class_='btn') }}
+</form>
+{% endblock %}
